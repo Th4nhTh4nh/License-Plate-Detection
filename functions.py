@@ -136,7 +136,6 @@ def PlatePreprecess(license_plate_thresh):
 
 
 def CharacterSegment(license_plate_thresh):
-    centers = []
     count = 0
     # Tách từng ký tự từ vùng chứa ảnh của biển số xe
     contours, _ = cv2.findContours(
@@ -159,10 +158,10 @@ def CharacterSegment(license_plate_thresh):
         cv2.imwrite(save_path, character)
 
         # Hiển thị từng ký tự
-        plt.figure()
-        plt.imshow(character, cmap="gray")
-        plt.title(f"Character {len(filtered_contours)}")
-        plt.show()
+        # plt.figure()
+        # plt.imshow(character, cmap="gray")
+        # plt.title(f"Character {len(filtered_contours)}")
+        # plt.show()
 
 
 def CharactersClassification():
@@ -202,3 +201,9 @@ def CharactersClassification():
 # CharacterSegment(mask)
 # CharactersClassification()
 # plt.show()
+
+detect, plate = DetectPlate("./pic/car1.jpg")
+processed_plate = PlatePreprecess(plate)
+
+CharacterSegment(processed_plate)
+CharactersClassification()

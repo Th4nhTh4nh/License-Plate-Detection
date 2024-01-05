@@ -1,19 +1,22 @@
 import os
 import cv2
+import pytesseract
 from flask import Flask, render_template, send_from_directory, url_for
 from flask_uploads import UploadSet, IMAGES, configure_uploads
 from flask_wtf import FlaskForm
 from wtforms import SubmitField
 from flask_wtf.file import FileAllowed, FileRequired, FileField
-from functions import DetectPlate, PlatePreprecess
-import pytesseract
+from functions import (
+    DetectPlate,
+    PlatePreprecess,
+    CharacterSegment,
+    CharactersClassification,
+)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "fajfklajljkag"
 CONFIG = r"--oem 3 --psm 6"
-# UPLOAD_FOLDER = "./uploads"
 app.config["UPLOADED_PHOTOS_DEST"] = "uploads"
-
 app.config["PLATES_DEST"] = "plates"
 
 photos = UploadSet("photos", IMAGES)
@@ -57,8 +60,9 @@ def upload_image():
         plate_url = "." + plate_url
 
         plate_processed = PlatePreprecess(plate)
-        text = pytesseract.image_to_string(plate_processed, config=CONFIG)
-        text2 = pytesseract.image_to_boxes(plate_processed, config=CONFIG)
+        CharacterSegment(plate_processed)
+        text = CharactersClassification()
+        # text = pytesseract.image_to_string(plate_processed, config=CONFIG)
 
     else:
         file_url = None
