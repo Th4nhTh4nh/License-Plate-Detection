@@ -60,14 +60,11 @@ if not os.path.exists(SAVE_DIR):
     os.makedirs(SAVE_DIR)
 
 
+# phát hiện và cắt ảnh biển số
 def DetectPlate(image):
     bboxes = []
     class_ids = []
     scores = []
-
-    with open(CLASS_NAME_PATH, "r") as f:
-        class_names = [j[:-1] for j in f.readlines() if len(j) > 2]
-        f.close()
 
     net = cv2.dnn.readNetFromDarknet(MODEL_CFG_PATH, MODEL_WEIGHTS_PATH)
 
@@ -117,6 +114,7 @@ def DetectPlate(image):
     return license_plate_gray, license_plate_thresh
 
 
+# tiền xử lý, lọc nhiễu trên ảnh biển số
 def PlatePreprecess(license_plate_thresh):
     _, labels = cv2.connectedComponents(license_plate_thresh)
     mask = np.zeros(license_plate_thresh.shape, dtype="uint8")
@@ -135,6 +133,7 @@ def PlatePreprecess(license_plate_thresh):
     return mask
 
 
+# phân tách ký tự
 def CharacterSegment(license_plate_thresh):
     count = 0
     # Tách từng ký tự từ vùng chứa ảnh của biển số xe
@@ -164,6 +163,7 @@ def CharacterSegment(license_plate_thresh):
         # plt.show()
 
 
+# thực hiện phấn lớp ký tự
 def CharactersClassification():
     model = load_model(MODEL_PATH)
     Bien_so_xe = []
@@ -192,18 +192,7 @@ def CharactersClassification():
 
 
 # detect, plate = DetectPlate("./pic/car1.jpg")
-# plt.figure()
-# plt.imshow(cv2.cvtColor(plate, cv2.COLOR_BGR2RGB))
-# plt.show()
-# mask = PlatePreprecess(plate)
-# #plt.figure()
-# #plt.imshow(cv2.cvtColor(mask, cv2.COLOR_BGR2RGB))
-# CharacterSegment(mask)
+# processed_plate = PlatePreprecess(plate)
+
+# CharacterSegment(processed_plate)
 # CharactersClassification()
-# plt.show()
-
-detect, plate = DetectPlate("./pic/car1.jpg")
-processed_plate = PlatePreprecess(plate)
-
-CharacterSegment(processed_plate)
-CharactersClassification()
