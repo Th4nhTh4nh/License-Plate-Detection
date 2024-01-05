@@ -1,0 +1,9 @@
+numpy
+opencv-python
+matplotlib
+werkzeug
+wtforms
+flask
+scikit-learn
+keras
+sys
