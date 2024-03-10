@@ -1,10 +1,10 @@
 import os
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import util
 from keras.preprocessing import image
 from keras.models import load_model
+import matplotlib.pyplot as plt
 
 # định nghĩa các đường dẫn đến cfg, weights , nameclass của model
 MODEL_CFG_PATH = os.path.join(".", "model", "cfg", "yolov3-tiny.cfg")
@@ -15,7 +15,7 @@ SAVE_DIR = "./char_imgs"
 # đường dẫn ảnh
 IMAGE_PATH = "./pic/car1.jpg"
 # Đường dẫn đến mô hình CNN
-MODEL_PATH = "./model/cnn/cnn1.keras"
+MODEL_PATH = "./model/cnn/model2-200.keras"
 # Đường dẫn đến thư mục chứa ảnh cần dự đoán
 IMAGE_FOLDER = "./char_imgs"
 # lớp của ký tự
@@ -111,6 +111,10 @@ def DetectPlate(image):
         )
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # license_plate_thresh = cv2.cvtColor(license_plate_thresh, cv2.COLOR_BGR2RGB)
+
+    #plt.figure()
+    #plt.imshow(cv2.cvtColor(license_plate_thresh, cv2.COLOR_BGR2RGB))
+    #plt.show()
     return license_plate_gray, license_plate_thresh
 
 
@@ -130,6 +134,9 @@ def PlatePreprecess(license_plate_thresh):
         numPixels = cv2.countNonZero(labelMask)
         if numPixels > lower and numPixels < upper:
             mask = cv2.add(mask, labelMask)
+    plt.figure()
+    plt.imshow(cv2.cvtColor(mask, cv2.COLOR_BGR2RGB))
+    plt.show()
     return mask
 
 
@@ -138,29 +145,45 @@ def CharacterSegment(license_plate_thresh):
     count = 0
     # Tách từng ký tự từ vùng chứa ảnh của biển số xe
     contours, _ = cv2.findContours(
-        license_plate_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        license_plate_thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
-    filtered_contours = [
-        contour
-        for contour in contours
-        if (cv2.contourArea(contour) > 30 and cv2.contourArea(contour) < 400)
-    ]
-    filtered_contours.sort(key=lambda x: cv2.boundingRect(x)[0])
+    boundingBoxes = [cv2.boundingRect(contour) for contour in contours]
+    boundingBoxes = np.array(boundingBoxes)
 
-    for contour in filtered_contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        character = license_plate_thresh[y : y + h, x : x + w]
+    mean_w = np.mean(boundingBoxes[:, 2])
+    mean_h = np.mean(boundingBoxes[:, 3])
+    mean_y = np.mean(boundingBoxes[:, 1])
 
-        count += 1
-        filename = f"char_{count}.jpg"
+    threshold_w = mean_w * 1.5
+    threshold_h = mean_h * 1.5
+
+    new_boundingBoxes = boundingBoxes[(boundingBoxes[:, 2] < threshold_w) & (boundingBoxes[:, 3] < threshold_h)]
+
+    #image_with_bbox = cv2.cvtColor(license_plate_thresh.copy(), cv2.COLOR_GRAY2BGR)
+    """"
+    for bbox in new_boundingBoxes:
+        x, y, w, h = bbox
+        image_with_bbox = cv2.rectangle(image_with_bbox, (x, y), (x+w, y+h), (0, 0, 255), 2)
+        image_with_bbox_on_black = np.zeros_like(image_with_bbox)
+        image_with_bbox_on_black = cv2.rectangle(image_with_bbox_on_black, (0, 0),
+                                                 (image_with_bbox.shape[1], image_with_bbox.shape[0]), (0, 0, 0), -1)
+        image_with_bbox_on_black = cv2.add(image_with_bbox_on_black, image_with_bbox)
+
+        cv2.imshow("Image with Bounding Box", image_with_bbox_on_black)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    """
+    new_boundingBoxes = sorted(new_boundingBoxes, key=lambda bbox: bbox[0])
+
+    for i, bbox in enumerate(new_boundingBoxes):
+        x, y, w, h = bbox
+        char_img = license_plate_thresh[y:y+h, x:x+w]
+        char_img = cv2.cvtColor(char_img, cv2.COLOR_GRAY2RGB)
+
+        filename = f"char_{i}.jpg"
         save_path = os.path.join(SAVE_DIR, filename)
-        cv2.imwrite(save_path, character)
+        cv2.imwrite(save_path, char_img)
 
-        # Hiển thị từng ký tự
-        # plt.figure()
-        # plt.imshow(character, cmap="gray")
-        # plt.title(f"Character {len(filtered_contours)}")
-        # plt.show()
 
 
 # thực hiện phấn lớp ký tự
@@ -174,7 +197,7 @@ def CharactersClassification():
 
             img = image.load_img(char_img_path, target_size=(20, 20))
             img_array = image.img_to_array(img)
-            gray_img = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
+            gray_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
             gray_img = gray_img.reshape((20, 20, 1))
 
             prediction = model.predict(np.array([gray_img]))
@@ -191,8 +214,7 @@ def CharactersClassification():
     return result_string
 
 
-# detect, plate = DetectPlate("./pic/car1.jpg")
-# processed_plate = PlatePreprecess(plate)
-
-# CharacterSegment(processed_plate)
-# CharactersClassification()
+#detect, plate = DetectPlate(IMAGE_PATH)
+#processed_plate = PlatePreprecess(plate)
+#CharacterSegment(processed_plate)
+#CharactersClassification()

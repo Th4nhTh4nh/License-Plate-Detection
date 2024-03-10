@@ -3,10 +3,13 @@ import cv2
 import os
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Dropout, Flatten
+from tensorflow.keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
 from keras.utils import to_categorical
 from keras.models import load_model
+from tensorflow.keras import optimizers
+from keras.utils import plot_model
 import sys
 
 # Load data and labels (sử dụng code của bạn để load dữ liệu)
@@ -121,18 +124,58 @@ def vgg_model():
     return model
 
 
+def test_model():
+  # CNN model
+    model = Sequential()
+    model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(20, 20, 1)))
+    model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(512, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(34, activation='softmax'))
+
+    model.compile(loss="categorical_crossentropy", optimizer=optimizers.Adam(1e-3), metrics=['acc'])
+    model.summary()
+    plot_model(model, to_file="./model_structure.png", show_shapes=True, show_layer_names=True)
+    return model
+
+model = test_model()
+reduce_lr = ReduceLROnPlateau(monitor='val_acc', factor=0.2, patience=5, verbose=1, )
+cpt_save = ModelCheckpoint('./weight.h5', save_best_only=True, monitor='val_acc', mode='max')
+#his = model.fit(X_train, y_train, validation_split=0.15, callbacks=[cpt_save, reduce_lr], epochs=500,
+                #verbose=1, shuffle=True, batch_size=128, validation_data=(X_test, y_test))
+#model.save("./model/cnn/model-500.keras")
+
 def summarize_diagnostics(history):
     # plot loss
     plt.subplot(211)
     plt.title("Cross Entropy Loss")
     plt.plot(history.history["loss"], color="blue", label="train")
     plt.plot(history.history["val_loss"], color="orange", label="test")
+    plt.legend()
     # plot accuracy
     plt.subplot(212)
     plt.title("Classification Accuracy")
-    plt.plot(history.history["accuracy"], color="blue", label="train")
-    plt.plot(history.history["val_accuracy"], color="orange", label="test")
+    plt.plot(history.history["acc"], color="blue", label="train")
+    plt.plot(history.history["val_acc"], color="orange", label="test")
+    plt.legend()
     # save plot to file
     filename = sys.argv[0].split("/")[-1]
-    plt.savefig(filename + "_plot.png")
+    plt.savefig(filename + "_plot500.png")
     plt.close()
+
+#summarize_diagnostics(his)
+
